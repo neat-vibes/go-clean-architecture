@@ -1,0 +1,558 @@
+@startuml
+namespace bootstrap {
+    class Application << (S,Aquamarine) >> {
+        + Env *Env
+        + Mongo mongo.Client
+
+        + CloseDBConnection() 
+
+    }
+    class Env << (S,Aquamarine) >> {
+        + AppEnv string
+        + ServerAddress string
+        + ContextTimeout int
+        + DBHost string
+        + DBPort string
+        + DBUser string
+        + DBPass string
+        + DBName string
+        + AccessTokenExpiryHour int
+        + RefreshTokenExpiryHour int
+        + AccessTokenSecret string
+        + RefreshTokenSecret string
+
+    }
+}
+
+
+"bootstrap.Application""uses" o-- "bootstrap.Env"
+"bootstrap.Application""uses" o-- "mongo.Client"
+
+namespace controller {
+    class LoginController << (S,Aquamarine) >> {
+        + LoginUsecase domain.LoginUsecase
+        + Env *bootstrap.Env
+
+        + Login(c *gin.Context) 
+
+    }
+    class ProfileController << (S,Aquamarine) >> {
+        + ProfileUsecase domain.ProfileUsecase
+
+        + Fetch(c *gin.Context) 
+
+    }
+    class RefreshTokenController << (S,Aquamarine) >> {
+        + RefreshTokenUsecase domain.RefreshTokenUsecase
+        + Env *bootstrap.Env
+
+        + RefreshToken(c *gin.Context) 
+
+    }
+    class SignupController << (S,Aquamarine) >> {
+        + SignupUsecase domain.SignupUsecase
+        + Env *bootstrap.Env
+
+        + Signup(c *gin.Context) 
+
+    }
+    class TaskController << (S,Aquamarine) >> {
+        + TaskUsecase domain.TaskUsecase
+
+        + Create(c *gin.Context) 
+        + Fetch(c *gin.Context) 
+
+    }
+}
+
+
+"controller.LoginController""uses" o-- "bootstrap.Env"
+"controller.LoginController""uses" o-- "domain.LoginUsecase"
+"controller.ProfileController""uses" o-- "domain.ProfileUsecase"
+"controller.RefreshTokenController""uses" o-- "bootstrap.Env"
+"controller.RefreshTokenController""uses" o-- "domain.RefreshTokenUsecase"
+"controller.SignupController""uses" o-- "bootstrap.Env"
+"controller.SignupController""uses" o-- "domain.SignupUsecase"
+"controller.TaskController""uses" o-- "domain.TaskUsecase"
+
+namespace domain {
+    class ErrorResponse << (S,Aquamarine) >> {
+        + Message string
+
+    }
+    class JwtCustomClaims << (S,Aquamarine) >> {
+        + Name string
+        + ID string
+
+    }
+    class JwtCustomRefreshClaims << (S,Aquamarine) >> {
+        + ID string
+
+    }
+    class LoginRequest << (S,Aquamarine) >> {
+        + Email string
+        + Password string
+
+    }
+    class LoginResponse << (S,Aquamarine) >> {
+        + AccessToken string
+        + RefreshToken string
+
+    }
+    interface LoginUsecase  {
+        + GetUserByEmail(c context.Context, email string) (User, error)
+        + CreateAccessToken(user *User, secret string, expiry int) (string, error)
+        + CreateRefreshToken(user *User, secret string, expiry int) (string, error)
+
+    }
+    class Profile << (S,Aquamarine) >> {
+        + Name string
+        + Email string
+
+    }
+    interface ProfileUsecase  {
+        + GetProfileByID(c context.Context, userID string) (*Profile, error)
+
+    }
+    class RefreshTokenRequest << (S,Aquamarine) >> {
+        + RefreshToken string
+
+    }
+    class RefreshTokenResponse << (S,Aquamarine) >> {
+        + AccessToken string
+        + RefreshToken string
+
+    }
+    interface RefreshTokenUsecase  {
+        + GetUserByID(c context.Context, id string) (User, error)
+        + CreateAccessToken(user *User, secret string, expiry int) (string, error)
+        + CreateRefreshToken(user *User, secret string, expiry int) (string, error)
+        + ExtractIDFromToken(requestToken string, secret string) (string, error)
+
+    }
+    class SignupRequest << (S,Aquamarine) >> {
+        + Name string
+        + Email string
+        + Password string
+
+    }
+    class SignupResponse << (S,Aquamarine) >> {
+        + AccessToken string
+        + RefreshToken string
+
+    }
+    interface SignupUsecase  {
+        + Create(c context.Context, user *User) error
+        + GetUserByEmail(c context.Context, email string) (User, error)
+        + CreateAccessToken(user *User, secret string, expiry int) (string, error)
+        + CreateRefreshToken(user *User, secret string, expiry int) (string, error)
+
+    }
+    class SuccessResponse << (S,Aquamarine) >> {
+        + Message string
+
+    }
+    class Task << (S,Aquamarine) >> {
+        + ID primitive.ObjectID
+        + Title string
+        + UserID primitive.ObjectID
+
+    }
+    interface TaskRepository  {
+        + Create(c context.Context, task *Task) error
+        + FetchByUserID(c context.Context, userID string) ([]Task, error)
+
+    }
+    interface TaskUsecase  {
+        + Create(c context.Context, task *Task) error
+        + FetchByUserID(c context.Context, userID string) ([]Task, error)
+
+    }
+    class User << (S,Aquamarine) >> {
+        + ID primitive.ObjectID
+        + Name string
+        + Email string
+        + Password string
+
+    }
+    interface UserRepository  {
+        + Create(c context.Context, user *User) error
+        + Fetch(c context.Context) ([]User, error)
+        + GetByEmail(c context.Context, email string) (User, error)
+        + GetByID(c context.Context, id string) (User, error)
+
+    }
+}
+"jwt.StandardClaims" *-- "extends""domain.JwtCustomClaims"
+"jwt.StandardClaims" *-- "extends""domain.JwtCustomRefreshClaims"
+
+
+"domain.Task""uses" o-- "primitive.ObjectID"
+"domain.User""uses" o-- "primitive.ObjectID"
+
+namespace mocks {
+    class Client << (S,Aquamarine) >> {
+        + Connect(_a0 context.Context) error
+        + Database(_a0 string) mongo.Database
+        + Disconnect(_a0 context.Context) error
+        + Ping(_a0 context.Context) error
+        + StartSession() (mongo.Session, error)
+        + UseSession(ctx context.Context, fn <font color=blue>func</font>(mongo.SessionContext) error) error
+
+    }
+    class Collection << (S,Aquamarine) >> {
+        + Aggregate(_a0 context.Context, _a1 <font color=blue>interface</font>{}) (mongo.Cursor, error)
+        + CountDocuments(_a0 context.Context, _a1 <font color=blue>interface</font>{}, _a2 ...*options.CountOptions) (int64, error)
+        + DeleteOne(_a0 context.Context, _a1 <font color=blue>interface</font>{}) (int64, error)
+        + Find(_a0 context.Context, _a1 <font color=blue>interface</font>{}, _a2 ...*options.FindOptions) (mongo.Cursor, error)
+        + FindOne(_a0 context.Context, _a1 <font color=blue>interface</font>{}) mongo.SingleResult
+        + InsertMany(_a0 context.Context, _a1 []<font color=blue>interface</font>{}) ([]<font color=blue>interface</font>{}, error)
+        + InsertOne(_a0 context.Context, _a1 <font color=blue>interface</font>{}) (<font color=blue>interface</font>{}, error)
+        + UpdateMany(_a0 context.Context, _a1 <font color=blue>interface</font>{}, _a2 <font color=blue>interface</font>{}, _a3 ...*options.UpdateOptions) (*mongo.UpdateResult, error)
+        + UpdateOne(_a0 context.Context, _a1 <font color=blue>interface</font>{}, _a2 <font color=blue>interface</font>{}, _a3 ...*options.UpdateOptions) (*mongo.UpdateResult, error)
+
+    }
+    class Cursor << (S,Aquamarine) >> {
+        + All(_a0 context.Context, _a1 <font color=blue>interface</font>{}) error
+        + Close(_a0 context.Context) error
+        + Decode(_a0 <font color=blue>interface</font>{}) error
+        + Next(_a0 context.Context) bool
+
+    }
+    class Database << (S,Aquamarine) >> {
+        + Client() mongo.Client
+        + Collection(_a0 string) mongo.Collection
+
+    }
+    class LoginUsecase << (S,Aquamarine) >> {
+        + CreateAccessToken(user *domain.User, secret string, expiry int) (string, error)
+        + CreateRefreshToken(user *domain.User, secret string, expiry int) (string, error)
+        + GetUserByEmail(c context.Context, email string) (domain.User, error)
+
+    }
+    class ProfileUsecase << (S,Aquamarine) >> {
+        + GetProfileByID(c context.Context, userID string) (*domain.Profile, error)
+
+    }
+    class RefreshTokenUsecase << (S,Aquamarine) >> {
+        + CreateAccessToken(user *domain.User, secret string, expiry int) (string, error)
+        + CreateRefreshToken(user *domain.User, secret string, expiry int) (string, error)
+        + ExtractIDFromToken(requestToken string, secret string) (string, error)
+        + GetUserByID(c context.Context, id string) (domain.User, error)
+
+    }
+    class SignupUsecase << (S,Aquamarine) >> {
+        + Create(c context.Context, user *domain.User) error
+        + CreateAccessToken(user *domain.User, secret string, expiry int) (string, error)
+        + CreateRefreshToken(user *domain.User, secret string, expiry int) (string, error)
+        + GetUserByEmail(c context.Context, email string) (domain.User, error)
+
+    }
+    class SingleResult << (S,Aquamarine) >> {
+        + Decode(_a0 <font color=blue>interface</font>{}) error
+
+    }
+    class TaskRepository << (S,Aquamarine) >> {
+        + Create(c context.Context, task *domain.Task) error
+        + FetchByUserID(c context.Context, userID string) ([]domain.Task, error)
+
+    }
+    class TaskUsecase << (S,Aquamarine) >> {
+        + Create(c context.Context, task *domain.Task) error
+        + FetchByUserID(c context.Context, userID string) ([]domain.Task, error)
+
+    }
+    class UserRepository << (S,Aquamarine) >> {
+        + Create(c context.Context, user *domain.User) error
+        + Fetch(c context.Context) ([]domain.User, error)
+        + GetByEmail(c context.Context, email string) (domain.User, error)
+        + GetByID(c context.Context, id string) (domain.User, error)
+
+    }
+    interface mockConstructorTestingTNewClient  {
+        + Cleanup( <font color=blue>func</font>() ) 
+
+    }
+    interface mockConstructorTestingTNewCollection  {
+        + Cleanup( <font color=blue>func</font>() ) 
+
+    }
+    interface mockConstructorTestingTNewCursor  {
+        + Cleanup( <font color=blue>func</font>() ) 
+
+    }
+    interface mockConstructorTestingTNewDatabase  {
+        + Cleanup( <font color=blue>func</font>() ) 
+
+    }
+    interface mockConstructorTestingTNewLoginUsecase  {
+        + Cleanup( <font color=blue>func</font>() ) 
+
+    }
+    interface mockConstructorTestingTNewProfileUsecase  {
+        + Cleanup( <font color=blue>func</font>() ) 
+
+    }
+    interface mockConstructorTestingTNewRefreshTokenUsecase  {
+        + Cleanup( <font color=blue>func</font>() ) 
+
+    }
+    interface mockConstructorTestingTNewSignupUsecase  {
+        + Cleanup( <font color=blue>func</font>() ) 
+
+    }
+    interface mockConstructorTestingTNewSingleResult  {
+        + Cleanup( <font color=blue>func</font>() ) 
+
+    }
+    interface mockConstructorTestingTNewTaskRepository  {
+        + Cleanup( <font color=blue>func</font>() ) 
+
+    }
+    interface mockConstructorTestingTNewTaskUsecase  {
+        + Cleanup( <font color=blue>func</font>() ) 
+
+    }
+    interface mockConstructorTestingTNewUserRepository  {
+        + Cleanup( <font color=blue>func</font>() ) 
+
+    }
+}
+"mock.Mock" *-- "extends""mocks.Client"
+"mock.Mock" *-- "extends""mocks.Collection"
+"mock.Mock" *-- "extends""mocks.Cursor"
+"mock.Mock" *-- "extends""mocks.Database"
+"mock.Mock" *-- "extends""mocks.LoginUsecase"
+"mock.Mock" *-- "extends""mocks.ProfileUsecase"
+"mock.Mock" *-- "extends""mocks.RefreshTokenUsecase"
+"mock.Mock" *-- "extends""mocks.SignupUsecase"
+"mock.Mock" *-- "extends""mocks.SingleResult"
+"mock.Mock" *-- "extends""mocks.TaskRepository"
+"mock.Mock" *-- "extends""mocks.TaskUsecase"
+"mock.Mock" *-- "extends""mocks.UserRepository"
+
+"mongo.Client" <|-- "implements""mocks.Client"
+"mongo.Collection" <|-- "implements""mocks.Collection"
+"mongo.Cursor" <|-- "implements""mocks.Cursor"
+"mongo.SingleResult" <|-- "implements""mocks.Cursor"
+"mongo.Database" <|-- "implements""mocks.Database"
+"domain.LoginUsecase" <|-- "implements""mocks.LoginUsecase"
+"domain.ProfileUsecase" <|-- "implements""mocks.ProfileUsecase"
+"domain.RefreshTokenUsecase" <|-- "implements""mocks.RefreshTokenUsecase"
+"domain.LoginUsecase" <|-- "implements""mocks.SignupUsecase"
+"domain.SignupUsecase" <|-- "implements""mocks.SignupUsecase"
+"mongo.SingleResult" <|-- "implements""mocks.SingleResult"
+"domain.TaskRepository" <|-- "implements""mocks.TaskRepository"
+"domain.TaskUsecase" <|-- "implements""mocks.TaskRepository"
+"domain.TaskRepository" <|-- "implements""mocks.TaskUsecase"
+"domain.TaskUsecase" <|-- "implements""mocks.TaskUsecase"
+"domain.UserRepository" <|-- "implements""mocks.UserRepository"
+
+
+namespace mongo {
+    interface Client  {
+        + Database( string) Database
+        + Connect( context.Context) error
+        + Disconnect( context.Context) error
+        + StartSession() (mongo.Session, error)
+        + UseSession(ctx context.Context, fn <font color=blue>func</font>(mongo.SessionContext) error) error
+        + Ping( context.Context) error
+
+    }
+    interface Collection  {
+        + FindOne( context.Context,  <font color=blue>interface</font>{}) SingleResult
+        + InsertOne( context.Context,  <font color=blue>interface</font>{}) (<font color=blue>interface</font>{}, error)
+        + InsertMany( context.Context,  []<font color=blue>interface</font>{}) ([]<font color=blue>interface</font>{}, error)
+        + DeleteOne( context.Context,  <font color=blue>interface</font>{}) (int64, error)
+        + Find( context.Context,  <font color=blue>interface</font>{},  ...*options.FindOptions) (Cursor, error)
+        + CountDocuments( context.Context,  <font color=blue>interface</font>{},  ...*options.CountOptions) (int64, error)
+        + Aggregate( context.Context,  <font color=blue>interface</font>{}) (Cursor, error)
+        + UpdateOne( context.Context,  <font color=blue>interface</font>{},  <font color=blue>interface</font>{},  ...*options.UpdateOptions) (*mongo.UpdateResult, error)
+        + UpdateMany( context.Context,  <font color=blue>interface</font>{},  <font color=blue>interface</font>{},  ...*options.UpdateOptions) (*mongo.UpdateResult, error)
+
+    }
+    interface Cursor  {
+        + Close( context.Context) error
+        + Next( context.Context) bool
+        + Decode( <font color=blue>interface</font>{}) error
+        + All( context.Context,  <font color=blue>interface</font>{}) error
+
+    }
+    interface Database  {
+        + Collection( string) Collection
+        + Client() Client
+
+    }
+    interface SingleResult  {
+        + Decode( <font color=blue>interface</font>{}) error
+
+    }
+    class mongoClient << (S,Aquamarine) >> {
+        - cl *mongo.Client
+
+        + Ping(ctx context.Context) error
+        + Database(dbName string) Database
+        + UseSession(ctx context.Context, fn <font color=blue>func</font>(mongo.SessionContext) error) error
+        + StartSession() (mongo.Session, error)
+        + Connect(ctx context.Context) error
+        + Disconnect(ctx context.Context) error
+
+    }
+    class mongoCollection << (S,Aquamarine) >> {
+        - coll *mongo.Collection
+
+        + FindOne(ctx context.Context, filter <font color=blue>interface</font>{}) SingleResult
+        + UpdateOne(ctx context.Context, filter <font color=blue>interface</font>{}, update <font color=blue>interface</font>{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error)
+        + InsertOne(ctx context.Context, document <font color=blue>interface</font>{}) (<font color=blue>interface</font>{}, error)
+        + InsertMany(ctx context.Context, document []<font color=blue>interface</font>{}) ([]<font color=blue>interface</font>{}, error)
+        + DeleteOne(ctx context.Context, filter <font color=blue>interface</font>{}) (int64, error)
+        + Find(ctx context.Context, filter <font color=blue>interface</font>{}, opts ...*options.FindOptions) (Cursor, error)
+        + Aggregate(ctx context.Context, pipeline <font color=blue>interface</font>{}) (Cursor, error)
+        + UpdateMany(ctx context.Context, filter <font color=blue>interface</font>{}, update <font color=blue>interface</font>{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error)
+        + CountDocuments(ctx context.Context, filter <font color=blue>interface</font>{}, opts ...*options.CountOptions) (int64, error)
+
+    }
+    class mongoCursor << (S,Aquamarine) >> {
+        - mc *mongo.Cursor
+
+        + Close(ctx context.Context) error
+        + Next(ctx context.Context) bool
+        + Decode(v <font color=blue>interface</font>{}) error
+        + All(ctx context.Context, result <font color=blue>interface</font>{}) error
+
+    }
+    class mongoDatabase << (S,Aquamarine) >> {
+        - db *mongo.Database
+
+        + Collection(colName string) Collection
+        + Client() Client
+
+    }
+    class mongoSession << (S,Aquamarine) >> {
+    }
+    class mongoSingleResult << (S,Aquamarine) >> {
+        - sr *mongo.SingleResult
+
+        + Decode(v <font color=blue>interface</font>{}) error
+
+    }
+    class nullawareDecoder << (S,Aquamarine) >> {
+        - defDecoder bsoncodec.ValueDecoder
+        - zeroValue reflect.Value
+
+        + DecodeValue(dctx bsoncodec.DecodeContext, vr bsonrw.ValueReader, val reflect.Value) error
+
+    }
+}
+"mongo.Session" *-- "extends""mongo.mongoSession"
+
+"mongo.Client" <|-- "implements""mongo.mongoClient"
+"mongo.Collection" <|-- "implements""mongo.mongoCollection"
+"mongo.Cursor" <|-- "implements""mongo.mongoCursor"
+"mongo.SingleResult" <|-- "implements""mongo.mongoCursor"
+"mongo.Database" <|-- "implements""mongo.mongoDatabase"
+"mongo.SingleResult" <|-- "implements""mongo.mongoSingleResult"
+
+"mongo.mongoClient""uses" o-- "mongo.Client"
+"mongo.mongoCollection""uses" o-- "mongo.Collection"
+"mongo.mongoCursor""uses" o-- "mongo.Cursor"
+"mongo.mongoDatabase""uses" o-- "mongo.Database"
+"mongo.mongoSingleResult""uses" o-- "mongo.SingleResult"
+"mongo.nullawareDecoder""uses" o-- "bsoncodec.ValueDecoder"
+"mongo.nullawareDecoder""uses" o-- "reflect.Value"
+
+namespace repository {
+    class taskRepository << (S,Aquamarine) >> {
+        - database mongo.Database
+        - collection string
+
+        + Create(c context.Context, task *domain.Task) error
+        + FetchByUserID(c context.Context, userID string) ([]domain.Task, error)
+
+    }
+    class userRepository << (S,Aquamarine) >> {
+        - database mongo.Database
+        - collection string
+
+        + Create(c context.Context, user *domain.User) error
+        + Fetch(c context.Context) ([]domain.User, error)
+        + GetByEmail(c context.Context, email string) (domain.User, error)
+        + GetByID(c context.Context, id string) (domain.User, error)
+
+    }
+}
+
+"domain.TaskRepository" <|-- "implements""repository.taskRepository"
+"domain.TaskUsecase" <|-- "implements""repository.taskRepository"
+"domain.UserRepository" <|-- "implements""repository.userRepository"
+
+"repository.taskRepository""uses" o-- "mongo.Database"
+"repository.userRepository""uses" o-- "mongo.Database"
+
+namespace usecase {
+    class loginUsecase << (S,Aquamarine) >> {
+        - userRepository domain.UserRepository
+        - contextTimeout time.Duration
+
+        + GetUserByEmail(c context.Context, email string) (domain.User, error)
+        + CreateAccessToken(user *domain.User, secret string, expiry int) (string, error)
+        + CreateRefreshToken(user *domain.User, secret string, expiry int) (string, error)
+
+    }
+    class profileUsecase << (S,Aquamarine) >> {
+        - userRepository domain.UserRepository
+        - contextTimeout time.Duration
+
+        + GetProfileByID(c context.Context, userID string) (*domain.Profile, error)
+
+    }
+    class refreshTokenUsecase << (S,Aquamarine) >> {
+        - userRepository domain.UserRepository
+        - contextTimeout time.Duration
+
+        + GetUserByID(c context.Context, email string) (domain.User, error)
+        + CreateAccessToken(user *domain.User, secret string, expiry int) (string, error)
+        + CreateRefreshToken(user *domain.User, secret string, expiry int) (string, error)
+        + ExtractIDFromToken(requestToken string, secret string) (string, error)
+
+    }
+    class signupUsecase << (S,Aquamarine) >> {
+        - userRepository domain.UserRepository
+        - contextTimeout time.Duration
+
+        + Create(c context.Context, user *domain.User) error
+        + GetUserByEmail(c context.Context, email string) (domain.User, error)
+        + CreateAccessToken(user *domain.User, secret string, expiry int) (string, error)
+        + CreateRefreshToken(user *domain.User, secret string, expiry int) (string, error)
+
+    }
+    class taskUsecase << (S,Aquamarine) >> {
+        - taskRepository domain.TaskRepository
+        - contextTimeout time.Duration
+
+        + Create(c context.Context, task *domain.Task) error
+        + FetchByUserID(c context.Context, userID string) ([]domain.Task, error)
+
+    }
+}
+
+"domain.LoginUsecase" <|-- "implements""usecase.loginUsecase"
+"domain.ProfileUsecase" <|-- "implements""usecase.profileUsecase"
+"domain.RefreshTokenUsecase" <|-- "implements""usecase.refreshTokenUsecase"
+"domain.LoginUsecase" <|-- "implements""usecase.signupUsecase"
+"domain.SignupUsecase" <|-- "implements""usecase.signupUsecase"
+"domain.TaskRepository" <|-- "implements""usecase.taskUsecase"
+"domain.TaskUsecase" <|-- "implements""usecase.taskUsecase"
+
+"usecase.loginUsecase""uses" o-- "domain.UserRepository"
+"usecase.loginUsecase""uses" o-- "time.Duration"
+"usecase.profileUsecase""uses" o-- "domain.UserRepository"
+"usecase.profileUsecase""uses" o-- "time.Duration"
+"usecase.refreshTokenUsecase""uses" o-- "domain.UserRepository"
+"usecase.refreshTokenUsecase""uses" o-- "time.Duration"
+"usecase.signupUsecase""uses" o-- "domain.UserRepository"
+"usecase.signupUsecase""uses" o-- "time.Duration"
+"usecase.taskUsecase""uses" o-- "domain.TaskRepository"
+"usecase.taskUsecase""uses" o-- "time.Duration"
+
+@enduml

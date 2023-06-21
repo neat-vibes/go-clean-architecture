@@ -1,0 +1,127 @@
+@startuml
+namespace config {
+    class Config << (S,Aquamarine) >> {
+        + Log LogConfig
+        + Server Server
+        + Context Context
+        + Database DatabaseOptions
+
+        + GetLogLevel() string
+        + GetLogPath() string
+        + GetDatabaseType() string
+        + PrintConfig() 
+
+    }
+    class Context << (S,Aquamarine) >> {
+        + Timeout int
+
+    }
+    class DatabaseOptions << (S,Aquamarine) >> {
+        + Type string
+        + MySQL *MySQLConfig
+
+    }
+    class LogConfig << (S,Aquamarine) >> {
+        + Level string
+        + Path string
+
+    }
+    class MySQLConfig << (S,Aquamarine) >> {
+        + Host string
+        + Port string
+        + User string
+        + Password string
+        + DBName string
+
+    }
+    class Server << (S,Aquamarine) >> {
+        + Address string
+        + Port string
+
+    }
+}
+
+
+"config.Config""uses" o-- "config.Context"
+"config.Config""uses" o-- "config.DatabaseOptions"
+"config.Config""uses" o-- "config.LogConfig"
+"config.Config""uses" o-- "config.Server"
+"config.DatabaseOptions""uses" o-- "config.MySQLConfig"
+
+namespace frameworksdrivers {
+    class DatabaseFactory << (S,Aquamarine) >> {
+        + CreateDatabase(config *config.Config, l *logger.Logger) (InterfaceDatabaseProduct, error)
+
+    }
+    interface InterfaceDatabaseFactory  {
+        + CreateDatabase(config *config.Config) (InterfaceDatabaseProduct, error)
+
+    }
+    interface InterfaceDatabaseProduct  {
+        + CreateDatabaseConnection() 
+        + PingDatabase() 
+        + CloseDatabaseConnection() error
+
+    }
+}
+
+
+
+namespace logger {
+    class Logger << (S,Aquamarine) >> {
+        - logger *zap.Logger
+
+        + Debug(msg string, fields ...zap.Field) 
+        + Info(msg string, fields ...zap.Field) 
+        + Warn(msg string, fields ...zap.Field) 
+        + Error(msg string, fields ...zap.Field) 
+        + Fatal(msg string, fields ...zap.Field) 
+        + Panic(msg string, fields ...zap.Field) 
+        + Sync() error
+
+    }
+}
+
+
+"logger.Logger""uses" o-- "zap.Logger"
+
+namespace mongodb {
+    class MongodbProduct << (S,Aquamarine) >> {
+        + DBConn *sql.DB
+        + Err error
+
+        + CreateDatabaseConnection() 
+        + PingDatabase() 
+        + CloseDatabaseConnection() error
+
+    }
+}
+
+"frameworksdrivers.InterfaceDatabaseProduct" <|-- "implements""mongodb.MongodbProduct"
+
+"mongodb.MongodbProduct""uses" o-- "sql.DB"
+
+namespace mysql {
+    class MySQLProduct << (S,Aquamarine) >> {
+        + L *logger.Logger
+        + DBConn *sql.DB
+        + Err error
+        + Address string
+        + Port string
+        + User string
+        + Password string
+        + DBName string
+
+        + CreateDatabaseConnection() 
+        + PingDatabase() 
+        + CloseDatabaseConnection() error
+
+    }
+}
+
+"frameworksdrivers.InterfaceDatabaseProduct" <|-- "implements""mysql.MySQLProduct"
+
+"mysql.MySQLProduct""uses" o-- "logger.Logger"
+"mysql.MySQLProduct""uses" o-- "sql.DB"
+
+@enduml

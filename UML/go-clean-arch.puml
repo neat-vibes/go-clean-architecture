@@ -1,0 +1,166 @@
+@startuml
+namespace domain {
+    class Article << (S,Aquamarine) >> {
+        + ID int64
+        + Title string
+        + Content string
+        + Author Author
+        + UpdatedAt time.Time
+        + CreatedAt time.Time
+
+    }
+    interface ArticleRepository  {
+        + Fetch(ctx context.Context, cursor string, num int64) ([]Article, string, error)
+        + GetByID(ctx context.Context, id int64) (Article, error)
+        + GetByTitle(ctx context.Context, title string) (Article, error)
+        + Update(ctx context.Context, ar *Article) error
+        + Store(ctx context.Context, a *Article) error
+        + Delete(ctx context.Context, id int64) error
+
+    }
+    interface ArticleUsecase  {
+        + Fetch(ctx context.Context, cursor string, num int64) ([]Article, string, error)
+        + GetByID(ctx context.Context, id int64) (Article, error)
+        + Update(ctx context.Context, ar *Article) error
+        + GetByTitle(ctx context.Context, title string) (Article, error)
+        + Store( context.Context,  *Article) error
+        + Delete(ctx context.Context, id int64) error
+
+    }
+    class Author << (S,Aquamarine) >> {
+        + ID int64
+        + Name string
+        + CreatedAt string
+        + UpdatedAt string
+
+    }
+    interface AuthorRepository  {
+        + GetByID(ctx context.Context, id int64) (Author, error)
+
+    }
+}
+
+
+"domain.Article""uses" o-- "domain.Author"
+"domain.Article""uses" o-- "time.Time"
+
+namespace http {
+    class ArticleHandler << (S,Aquamarine) >> {
+        + AUsecase domain.ArticleUsecase
+
+        + FetchArticle(c echo.Context) error
+        + GetByID(c echo.Context) error
+        + Store(c echo.Context) error
+        + Delete(c echo.Context) error
+
+    }
+    class ResponseError << (S,Aquamarine) >> {
+        + Message string
+
+    }
+}
+
+
+"http.ArticleHandler""uses" o-- "domain.ArticleUsecase"
+
+namespace middleware {
+    class GoMiddleware << (S,Aquamarine) >> {
+        + CORS(next echo.HandlerFunc) echo.HandlerFunc
+
+    }
+}
+
+
+
+namespace mocks {
+    class ArticleRepository << (S,Aquamarine) >> {
+        + Delete(ctx context.Context, id int64) error
+        + Fetch(ctx context.Context, cursor string, num int64) ([]domain.Article, string, error)
+        + GetByID(ctx context.Context, id int64) (domain.Article, error)
+        + GetByTitle(ctx context.Context, title string) (domain.Article, error)
+        + Store(_a0 context.Context, _a1 *domain.Article) error
+        + Update(ctx context.Context, ar *domain.Article) error
+
+    }
+    class ArticleUsecase << (S,Aquamarine) >> {
+        + Delete(ctx context.Context, id int64) error
+        + Fetch(ctx context.Context, cursor string, num int64) ([]domain.Article, string, error)
+        + GetByID(ctx context.Context, id int64) (domain.Article, error)
+        + GetByTitle(ctx context.Context, title string) (domain.Article, error)
+        + Store(_a0 context.Context, _a1 *domain.Article) error
+        + Update(ctx context.Context, ar *domain.Article) error
+
+    }
+    class AuthorRepository << (S,Aquamarine) >> {
+        + GetByID(ctx context.Context, id int64) (domain.Author, error)
+
+    }
+}
+"mock.Mock" *-- "extends""mocks.ArticleRepository"
+"mock.Mock" *-- "extends""mocks.ArticleUsecase"
+"mock.Mock" *-- "extends""mocks.AuthorRepository"
+
+"domain.ArticleRepository" <|-- "implements""mocks.ArticleRepository"
+"domain.ArticleUsecase" <|-- "implements""mocks.ArticleRepository"
+"domain.ArticleRepository" <|-- "implements""mocks.ArticleUsecase"
+"domain.ArticleUsecase" <|-- "implements""mocks.ArticleUsecase"
+"domain.AuthorRepository" <|-- "implements""mocks.AuthorRepository"
+
+
+namespace mysql {
+    class mysqlArticleRepository << (S,Aquamarine) >> {
+        + Conn *sql.DB
+
+        - fetch(ctx context.Context, query string, args ...<font color=blue>interface</font>{}) ([]domain.Article, error)
+
+        + Fetch(ctx context.Context, cursor string, num int64) ([]domain.Article, string, error)
+        + GetByID(ctx context.Context, id int64) (domain.Article, error)
+        + GetByTitle(ctx context.Context, title string) (domain.Article, error)
+        + Store(ctx context.Context, a *domain.Article) error
+        + Delete(ctx context.Context, id int64) error
+        + Update(ctx context.Context, ar *domain.Article) error
+
+    }
+    class mysqlAuthorRepo << (S,Aquamarine) >> {
+        + DB *sql.DB
+
+        - getOne(ctx context.Context, query string, args ...<font color=blue>interface</font>{}) (domain.Author, error)
+
+        + GetByID(ctx context.Context, id int64) (domain.Author, error)
+
+    }
+}
+
+"domain.ArticleRepository" <|-- "implements""mysql.mysqlArticleRepository"
+"domain.ArticleUsecase" <|-- "implements""mysql.mysqlArticleRepository"
+"domain.AuthorRepository" <|-- "implements""mysql.mysqlAuthorRepo"
+
+"mysql.mysqlArticleRepository""uses" o-- "sql.DB"
+"mysql.mysqlAuthorRepo""uses" o-- "sql.DB"
+
+namespace usecase {
+    class articleUsecase << (S,Aquamarine) >> {
+        - articleRepo domain.ArticleRepository
+        - authorRepo domain.AuthorRepository
+        - contextTimeout time.Duration
+
+        - fillAuthorDetails(c context.Context, data []domain.Article) ([]domain.Article, error)
+
+        + Fetch(c context.Context, cursor string, num int64) ([]domain.Article, string, error)
+        + GetByID(c context.Context, id int64) (domain.Article, error)
+        + Update(c context.Context, ar *domain.Article) error
+        + GetByTitle(c context.Context, title string) (domain.Article, error)
+        + Store(c context.Context, m *domain.Article) error
+        + Delete(c context.Context, id int64) error
+
+    }
+}
+
+"domain.ArticleRepository" <|-- "implements""usecase.articleUsecase"
+"domain.ArticleUsecase" <|-- "implements""usecase.articleUsecase"
+
+"usecase.articleUsecase""uses" o-- "domain.ArticleRepository"
+"usecase.articleUsecase""uses" o-- "domain.AuthorRepository"
+"usecase.articleUsecase""uses" o-- "time.Duration"
+
+@enduml
